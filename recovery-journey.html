@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recovery Journey</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f7f6f3; --surface: #ffffff; --surface2: #f0efe9;
+    --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+    --text: #1a1a18; --text2: #6b6b67; --text3: #999993;
+    --teal: #1D9E75; --teal-light: #e1f5ee; --teal-dark: #0F6E56;
+    --coral: #D85A30; --coral-light: #faece7; --coral-dark: #993C1D;
+    --blue-light: #e6f1fb; --blue-dark: #185FA5;
+    --green-light: #eaf3de; --green-dark: #3B6D11;
+    --gray-light: #f0efe9; --gray-dark: #444441;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a18; --surface: #242422; --surface2: #2e2e2c;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
+      --text: #f0efe9; --text2: #9a9a94; --text3: #6b6b67;
+      --teal-light: #085041; --teal-dark: #9FE1CB;
+      --coral-light: #4A1B0C; --coral-dark: #F5C4B3;
+      --blue-light: #0C447C; --blue-dark: #B5D4F4;
+      --green-light: #27500A; --green-dark: #C0DD97;
+      --gray-light: #3a3a38; --gray-dark: #D3D1C7;
+    }
+  }
+  html, body { min-height: 100%; }
+  body { font-family: 'Georgia', serif; background: var(--bg); color: var(--text); padding: 2rem 1rem 4rem; }
+  .app { max-width: 640px; margin: 0 auto; }
+
+  .header { margin-bottom: 2rem; }
+  .header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+  .header h1 { font-size: 32px; font-weight: normal; letter-spacing: -0.5px; line-height: 1.1; }
+  .header h1 span { color: var(--teal); }
+  .days-badge { font-family: system-ui,sans-serif; font-size: 12px; background: var(--teal-light); color: var(--teal-dark); padding: 5px 12px; border-radius: 20px; white-space: nowrap; margin-top: 6px; flex-shrink: 0; }
+  .header-sub { font-size: 15px; color: var(--text2); font-family: system-ui,sans-serif; }
+
+  .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 2rem; }
+  .stat { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; }
+  .stat-label { font-family: system-ui,sans-serif; font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .stat-value { font-size: 24px; color: var(--text); letter-spacing: -1px; }
+  .stat-unit { font-size: 13px; color: var(--text2); letter-spacing: 0; }
+
+  .tabs { display: flex; border-bottom: 0.5px solid var(--border); margin-bottom: 1.75rem; }
+  .tab-btn { padding: 10px 20px; border: none; background: none; font-family: system-ui,sans-serif; font-size: 14px; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s,border-color 0.15s; }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--teal); border-bottom-color: var(--teal); }
+
+  .timeline { position: relative; padding-left: 32px; }
+  .timeline::before { content:''; position: absolute; left: 11px; top: 14px; bottom: 14px; width: 1px; background: var(--border); }
+  .entry { position: relative; margin-bottom: 1rem; }
+  .entry-dot { position: absolute; left: -26px; top: 18px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--bg); transition: transform 0.15s; }
+  .entry:hover .entry-dot { transform: scale(1.2); }
+  .dot-surgery { background: #888780; } .dot-peak { background: var(--coral); } .dot-good { background: var(--teal); }
+  .entry-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px 18px; cursor: pointer; transition: border-color 0.15s; user-select: none; }
+  .entry-card:hover,.entry-card.open { border-color: var(--border2); }
+  .entry-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .day-badge { font-family: system-ui,sans-serif; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+  .badge-surgery { background: var(--gray-light); color: var(--gray-dark); }
+  .badge-peak { background: var(--coral-light); color: var(--coral-dark); }
+  .badge-day { background: var(--teal-light); color: var(--teal-dark); }
+  .entry-date { font-family: system-ui,sans-serif; font-size: 13px; color: var(--text3); }
+  .entry-preview { font-family: system-ui,sans-serif; font-size: 13px; color: var(--text2); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .pain-bar { display: flex; gap: 3px; align-items: center; margin-left: auto; flex-shrink: 0; }
+  .pain-pip { width: 5px; height: 5px; border-radius: 50%; }
+  .entry-body { margin-top: 14px; padding-top: 14px; border-top: 0.5px solid var(--border); }
+  .entry-notes { font-size: 15px; line-height: 1.65; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .tag { font-family: system-ui,sans-serif; font-size: 11px; padding: 3px 10px; border-radius: 20px; }
+  .tag-mobility { background: var(--teal-light); color: var(--teal-dark); }
+  .tag-medication { background: var(--blue-light); color: var(--blue-dark); }
+  .tag-milestone { background: var(--green-light); color: var(--green-dark); }
+  .tag-pain { background: var(--coral-light); color: var(--coral-dark); }
+  .entry-actions { margin-top: 12px; display: flex; gap: 14px; align-items: center; }
+  .btn-edit { font-family: system-ui,sans-serif; font-size: 12px; color: var(--teal-dark); background: var(--teal-light); border: none; cursor: pointer; padding: 6px 14px; border-radius: 20px; transition: opacity 0.15s; }
+  .btn-edit:hover { opacity: 0.8; }
+  .btn-delete { font-family: system-ui,sans-serif; font-size: 12px; color: var(--text3); background: none; border: none; cursor: pointer; padding: 0; transition: color 0.15s; }
+  .btn-delete:hover { color: var(--coral); }
+
+  .add-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 14px 18px; background: none; border: 1px dashed var(--border2); border-radius: var(--radius); color: var(--text2); font-family: system-ui,sans-serif; font-size: 14px; cursor: pointer; margin-top: 0.25rem; transition: background 0.15s,color 0.15s; text-align: left; }
+  .add-btn:hover { background: var(--surface); color: var(--text); }
+  .add-icon { width: 22px; height: 22px; border-radius: 50%; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+
+  .form-wrap { background: var(--surface); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 22px; margin-top: 0.5rem; }
+  .form-title { font-size: 18px; font-weight: normal; margin-bottom: 4px; }
+  .form-subtitle { font-size: 13px; color: var(--text3); font-family: system-ui,sans-serif; margin-bottom: 18px; }
+  .form-spacer { margin-bottom: 18px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-group { display: flex; flex-direction: column; }
+  .form-group.full { grid-column: 1/-1; }
+  label { font-family: system-ui,sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text3); margin-bottom: 7px; }
+  input[type="date"],input[type="text"],textarea { width: 100%; padding: 9px 12px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); font-family: system-ui,sans-serif; font-size: 14px; outline: none; transition: border-color 0.15s; -webkit-appearance: none; }
+  input:focus,textarea:focus { border-color: var(--teal); }
+  textarea { height: 90px; resize: vertical; line-height: 1.5; }
+  .pain-row { display: flex; align-items: center; gap: 14px; }
+  input[type="range"] { flex: 1; -webkit-appearance: none; height: 4px; background: var(--border2); border-radius: 2px; outline: none; cursor: pointer; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--teal); cursor: pointer; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--teal); }
+  .tag-toggles { display: flex; flex-wrap: wrap; gap: 7px; }
+  .tag-btn { font-family: system-ui,sans-serif; font-size: 12px; padding: 5px 13px; border-radius: 20px; border: 0.5px solid var(--border2); background: none; color: var(--text2); cursor: pointer; transition: all 0.12s; }
+  .tag-btn:hover { background: var(--surface2); }
+  .tag-btn.on-mobility { background: var(--teal-light); color: var(--teal-dark); border-color: var(--teal); }
+  .tag-btn.on-medication { background: var(--blue-light); color: var(--blue-dark); border-color: #378ADD; }
+  .tag-btn.on-milestone { background: var(--green-light); color: var(--green-dark); border-color: #639922; }
+  .tag-btn.on-pain { background: var(--coral-light); color: var(--coral-dark); border-color: var(--coral); }
+  .form-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-save { flex: 1; padding: 11px; background: var(--teal); color: #fff; border: none; border-radius: var(--radius-sm); font-family: system-ui,sans-serif; font-size: 14px; cursor: pointer; transition: opacity 0.15s; }
+  .btn-save:hover { opacity: 0.88; }
+  .btn-cancel { padding: 11px 20px; background: none; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); font-family: system-ui,sans-serif; font-size: 14px; color: var(--text2); cursor: pointer; transition: background 0.15s; }
+  .btn-cancel:hover { background: var(--surface2); }
+
+  .meds-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .section-label { font-family: system-ui,sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); }
+  .today-date-label { font-family: system-ui,sans-serif; font-size: 13px; color: var(--text2); }
+  .med-item { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; transition: border-color 0.15s; }
+  .med-item.logging { border-color: var(--border2); }
+  .med-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+  .med-info { flex: 1; min-width: 0; }
+  .med-name { font-size: 14px; color: var(--text); display: block; font-family: system-ui,sans-serif; font-weight: 500; }
+  .med-dim { font-weight: normal; color: var(--text3); }
+  .med-detail { font-size: 12px; color: var(--text3); font-family: system-ui,sans-serif; margin-top: 1px; }
+  .med-pips { display: flex; gap: 5px; align-items: center; }
+  .med-pip { width: 9px; height: 9px; border-radius: 50%; background: var(--border2); transition: background 0.2s; }
+  .med-pip.taken { background: var(--teal); }
+  .med-count-free { font-family: system-ui,sans-serif; font-size: 13px; color: var(--text2); }
+  .btn-log { padding: 7px 14px; border: 0.5px solid var(--border2); background: none; border-radius: 20px; font-size: 13px; color: var(--text2); cursor: pointer; font-family: system-ui,sans-serif; white-space: nowrap; transition: all 0.12s; }
+  .btn-log:hover { background: var(--teal-light); color: var(--teal-dark); border-color: var(--teal); }
+  .btn-log.cancelling { color: var(--coral-dark); border-color: var(--coral); background: var(--coral-light); }
+
+  .log-inline { padding: 14px 16px; border-top: 0.5px solid var(--border); background: var(--surface2); display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .log-group { display: flex; flex-direction: column; gap: 5px; }
+  .log-label { font-family: system-ui,sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text3); }
+  input[type="time"] { padding: 7px 10px; font-size: 14px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-family: system-ui,sans-serif; outline: none; -webkit-appearance: none; transition: border-color 0.15s; }
+  input[type="time"]:focus { border-color: var(--teal); }
+  .log-note-in { padding: 7px 10px; font-size: 13px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-family: system-ui,sans-serif; outline: none; width: 190px; transition: border-color 0.15s; }
+  .log-note-in:focus { border-color: var(--teal); }
+  .btn-confirm { padding: 8px 18px; background: var(--teal); color: white; border: none; border-radius: var(--radius-sm); font-size: 13px; font-family: system-ui,sans-serif; cursor: pointer; align-self: flex-end; }
+  .btn-confirm:hover { opacity: 0.88; }
+
+  .history-title { font-family: system-ui,sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); margin: 2rem 0 1rem; }
+  .history-group { margin-bottom: 1.25rem; }
+  .history-date { font-family: system-ui,sans-serif; font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 8px; }
+  .history-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 6px; }
+  .history-med { font-family: system-ui,sans-serif; font-size: 14px; color: var(--text); flex: 1; min-width: 0; }
+  .history-time { font-family: 'Courier New',monospace; font-size: 12px; color: var(--text3); flex-shrink: 0; }
+  .history-note { font-family: system-ui,sans-serif; font-size: 12px; color: var(--text2); font-style: italic; }
+  .btn-del-log { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 20px; line-height: 1; padding: 0 2px; transition: color 0.15s; flex-shrink: 0; }
+  .btn-del-log:hover { color: var(--coral); }
+
+  .empty { font-family: system-ui,sans-serif; font-size: 14px; color: var(--text3); text-align: center; padding: 2rem 0; }
+  .footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 0.5px solid var(--border); display: flex; justify-content: flex-end; }
+  .btn-export { font-family: system-ui,sans-serif; font-size: 12px; color: var(--text3); background: none; border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 7px 14px; cursor: pointer; transition: color 0.15s,border-color 0.15s; }
+  .btn-export:hover { color: var(--text); border-color: var(--border2); }
+
+  /* Last dose tracker */
+  .last-dose-section { margin-bottom: 1.75rem; }
+  .last-dose-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .last-dose-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 11px 14px; display: flex; flex-direction: column; gap: 3px; }
+  .last-dose-name { font-family: system-ui,sans-serif; font-size: 12px; font-weight: 600; color: var(--text); }
+  .last-dose-ago { font-family: 'Courier New',monospace; font-size: 15px; color: var(--teal); }
+  .last-dose-ago.warn { color: #BA7517; }
+  .last-dose-ago.none { color: var(--text3); font-family: system-ui,sans-serif; font-size: 13px; font-family: system-ui,sans-serif; }
+  .last-dose-at { font-family: system-ui,sans-serif; font-size: 11px; color: var(--text3); }
+
+  .guide-ai { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 0.5px solid var(--border); }
+  .guide-ai-label { font-family: system-ui,sans-serif; font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--teal-dark); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .guide-ai-label span { background: var(--teal-light); border-radius: 20px; padding: 2px 8px; }
+  .guide-ai-text { font-family: system-ui,sans-serif; font-size: 13px; color: var(--text); line-height: 1.7; }
+  .guide-ai-text p { margin-bottom: 8px; }
+  .guide-ai-text p:last-child { margin-bottom: 0; }
+  .guide-ai-loading { font-family: system-ui,sans-serif; font-size: 13px; color: var(--text3); font-style: italic; display: flex; align-items: center; gap: 8px; }
+  .guide-ai-loading::before { content: ''; width: 12px; height: 12px; border: 2px solid var(--border2); border-top-color: var(--teal); border-radius: 50%; display: inline-block; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+  .guide-ai-error { font-family: system-ui,sans-serif; font-size: 12px; color: var(--coral-dark); }
+  .guide-refresh { font-family: system-ui,sans-serif; font-size: 11px; color: var(--text3); background: none; border: none; cursor: pointer; padding: 0; margin-top: 8px; text-decoration: underline; text-underline-offset: 2px; }
+  .guide-refresh:hover { color: var(--teal); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Recovery guide */
+  .header-top-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+  .guide-toggle { display: flex; align-items: center; gap: 5px; font-family: system-ui,sans-serif; font-size: 11px; background: none; border: 0.5px solid var(--border2); border-radius: 20px; color: var(--text3); cursor: pointer; padding: 4px 10px; transition: all 0.15s; white-space: nowrap; }
+  .guide-toggle:hover { color: var(--text); border-color: var(--teal); }
+  .guide-toggle.open { color: var(--teal-dark); border-color: var(--teal); background: var(--teal-light); }
+  .guide-panel { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 1.5rem; }
+  .guide-today { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 0.5px solid var(--border); }
+  .guide-today-label { font-family: system-ui,sans-serif; font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--teal-dark); margin-bottom: 6px; }
+  .guide-today-title { font-size: 15px; color: var(--text); margin-bottom: 5px; }
+  .guide-today-note { font-family: system-ui,sans-serif; font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .guide-timeline-toggle { font-family: system-ui,sans-serif; font-size: 12px; color: var(--text3); background: none; border: none; cursor: pointer; padding: 0; margin-top: 2px; }
+  .guide-timeline-toggle:hover { color: var(--text); }
+  .guide-timeline { margin-top: 14px; }
+  .guide-phase { margin-bottom: 12px; }
+  .guide-phase-title { font-family: system-ui,sans-serif; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text3); margin-bottom: 6px; }
+  .guide-phase-note { font-family: system-ui,sans-serif; font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .guide-disclaimer { font-family: system-ui,sans-serif; font-size: 11px; color: var(--text3); margin-top: 14px; padding-top: 12px; border-top: 0.5px solid var(--border); font-style: italic; line-height: 1.5; }
+
+  @media (max-width: 480px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: 1fr 1fr; }
+    .header h1 { font-size: 26px; }
+    .log-note-in { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-top">
+      <h1>Recovery<br><span>Journey</span></h1>
+      <div class="header-top-right">
+        <div class="days-badge" id="days-badge">—</div>
+        <button class="guide-toggle" id="guide-toggle-btn" onclick="toggleGuide()">ⓘ Recovery guide</button>
+      </div>
+    </div>
+    <p class="header-sub" id="header-sub">Tracking your recovery</p>
+  </div>
+  <div class="stats" id="stats"></div>
+  <div class="guide-panel" id="guide-panel" style="display:none"></div>
+  <div class="tabs" id="tabs"></div>
+  <div id="main-content"></div>
+  <div class="footer">
+    <button class="btn-export" onclick="exportCSV()">Export as CSV</button>
+  </div>
+</div>
+
+<script>
+const JOURNAL_KEY = 'recovery-journey-v1';
+const MEDS_KEY    = 'recovery-meds-v1';
+
+const MEDS = [
+  { id:'dihydrocodeine', name:'Dihydrocodeine', dose:'',          schedule:'Up to 4x daily',        maxPerDay:4    },
+  { id:'paracetamol',    name:'Paracetamol',    dose:'1000mg',    schedule:'Up to 4x daily',         maxPerDay:4    },
+  { id:'ibuprofen',      name:'Ibuprofen',       dose:'400mg',     schedule:'3x daily',               maxPerDay:3    },
+  { id:'omeprazole',     name:'Omeprazole',      dose:'',          schedule:'Once daily (morning)',    maxPerDay:1    },
+  { id:'sennosides',     name:'Sennosides',       dose:'2 tablets', schedule:'Nightly',                maxPerDay:1    },
+  { id:'lactulose',      name:'Lactulose',        dose:'',          schedule:'1-2x daily',             maxPerDay:2    },
+  { id:'rivaroxaban',    name:'Rivaroxaban',      dose:'',          schedule:'Once daily (with evening meal)', maxPerDay:1 },
+];
+
+const TAGS = [
+  { key:'mobility',   label:'Mobility'   },
+  { key:'medication', label:'Medication' },
+  { key:'milestone',  label:'Milestone'  },
+  { key:'pain',       label:'Pain note'  },
+];
+
+const DEFAULT_ENTRIES = [
+  { id:1, date:'2026-04-29', dayLabel:'Day of Surgery', notes:'Surgery day.',                                                                                                              pain:5, tags:[],                        type:'surgery' },
+  { id:2, date:'2026-04-30', dayLabel:'Day 1',          notes:'Mobilising with physio. Sat in chair and walking around the room.',                                                         pain:6, tags:['mobility'],              type:'day'     },
+  { id:3, date:'2026-05-01', dayLabel:'Day 2',          notes:'Stiffness and pain overnight — peak of pain. Reduced the amount of mobilising. Oxycodone increased to 10mg. Ice helped a lot.', pain:8, tags:['pain','medication'], type:'peak'    },
+  { id:4, date:'2026-05-02', dayLabel:'Day 3',          notes:'Better night. Mobilising better — did stair assessment and got discharged. Up and down stairs a few times.',                pain:5, tags:['mobility','milestone'], type:'day'     },
+  { id:5, date:'2026-05-03', dayLabel:'Day 4',          notes:"Didn't take meds at night for the first time.",                                                                             pain:3, tags:['medication','milestone'], type:'day'    },
+];
+
+let entries      = [];
+let medLogs      = [];
+let activeTab    = 'journal';
+let expandedId   = null;
+let showForm     = false;
+let editingId    = null;
+let formData     = {};
+let activeLogMed = null;
+
+const todayStr  = () => new Date().toISOString().split('T')[0];
+const nowTime   = () => { const d=new Date(); return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'); };
+
+function timeSince(dateStr, timeStr) {
+  const [h, m] = timeStr.split(':').map(Number);
+  const then = new Date(dateStr + 'T' + timeStr + ':00');
+  const diffMs = Date.now() - then.getTime();
+  if (diffMs < 0) return null;
+  const totalMins = Math.floor(diffMs / 60000);
+  const hours = Math.floor(totalMins / 60);
+  const mins  = totalMins % 60;
+  if (hours === 0) return `${mins}m ago`;
+  return `${hours}h ${mins}m ago`;
+}
+
+function lastDoseFor(medId) {
+  const logs = medLogs
+    .filter(l => l.medId === medId)
+    .sort((a,b) => (b.date+b.time).localeCompare(a.date+a.time));
+  return logs[0] || null;
+}
+
+// Auto-refresh the meds tab every 60s so times stay current
+setInterval(() => { if (activeTab === 'meds') renderMeds(); }, 60000);
+const fmtDate   = d  => new Date(d+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+const fmtShort  = d  => new Date(d+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+const painColor = p  => p<=3?'#1D9E75':p<=6?'#BA7517':'#D85A30';
+const nextDay   = () => entries.filter(e=>e.type!=='surgery').length;
+const todayMedCount = id => medLogs.filter(l=>l.medId===id&&l.date===todayStr()).length;
+
+function painBar(pain) {
+  return Array.from({length:10},(_,i)=>`<div class="pain-pip" style="background:${i<pain?painColor(pain):'var(--border2)'}"></div>`).join('');
+}
+const dotClass   = e => e.type==='surgery'?'dot-surgery':(e.type==='peak'||e.pain>=7)?'dot-peak':'dot-good';
+const badgeClass = e => e.type==='surgery'?'badge-surgery':(e.type==='peak'||e.pain>=7)?'badge-peak':'badge-day';
+
+function load() {
+  try { entries = JSON.parse(localStorage.getItem(JOURNAL_KEY))||JSON.parse(JSON.stringify(DEFAULT_ENTRIES)); }
+  catch { entries = JSON.parse(JSON.stringify(DEFAULT_ENTRIES)); }
+  try { medLogs = JSON.parse(localStorage.getItem(MEDS_KEY))||[]; }
+  catch { medLogs = []; }
+  render();
+}
+const saveEntries = () => localStorage.setItem(JOURNAL_KEY, JSON.stringify(entries));
+const saveMedLogs = () => localStorage.setItem(MEDS_KEY,    JSON.stringify(medLogs));
+
+function render() { renderHeader(); renderStats(); renderTabs(); renderGuide(); activeTab==='journal'?renderJournal():renderMeds(); }
+
+function renderHeader() {
+  const sx = entries.find(e=>e.type==='surgery');
+  if (sx) {
+    const diff = Math.floor((Date.now()-new Date(sx.date+'T12:00:00'))/86400000);
+    document.getElementById('days-badge').textContent = diff+' days post-surgery';
+    document.getElementById('header-sub').textContent = 'Surgery on '+fmtDate(sx.date);
+  }
+}
+
+function renderStats() {
+  const avg  = entries.length?(entries.reduce((s,e)=>s+e.pain,0)/entries.length).toFixed(1):'--';
+  const best = entries.length?Math.min(...entries.map(e=>e.pain)):'--';
+  const dosesToday = medLogs.filter(l=>l.date===todayStr()).length;
+  const s3label = activeTab==='meds'?'Doses today':'Best score';
+  const s3val   = activeTab==='meds'?`${dosesToday}<span class="stat-unit"> doses</span>`:`${best}<span class="stat-unit">/10</span>`;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="stat-label">Days tracked</div><div class="stat-value">${entries.length}<span class="stat-unit"> entries</span></div></div>
+    <div class="stat"><div class="stat-label">Avg pain</div><div class="stat-value">${avg}<span class="stat-unit">/10</span></div></div>
+    <div class="stat"><div class="stat-label">${s3label}</div><div class="stat-value">${s3val}</div></div>`;
+}
+
+function renderTabs() {
+  document.getElementById('tabs').innerHTML =
+    `<button class="tab-btn${activeTab==='journal'?' active':''}" onclick="setTab('journal')">Journal</button>`+
+    `<button class="tab-btn${activeTab==='meds'?' active':''}" onclick="setTab('meds')">Medications</button>`;
+}
+
+function renderJournal() {
+  const sorted = [...entries].sort((a,b)=>a.date.localeCompare(b.date));
+  let html = '';
+
+  if (!sorted.length) {
+    html = '<div class="empty">No entries yet.</div>';
+  } else {
+    html = '<div class="timeline">';
+    sorted.forEach(e => {
+      const open = expandedId===e.id;
+      const tagsHtml = (e.tags||[]).map(t=>{
+        const f=TAGS.find(x=>x.key===t);
+        return `<span class="tag tag-${t}">${f?f.label:t}</span>`;
+      }).join('');
+      html += `
+        <div class="entry">
+          <div class="entry-dot ${dotClass(e)}"></div>
+          <div class="entry-card${open?' open':''}" onclick="toggle(${e.id})">
+            <div class="entry-header">
+              <span class="day-badge ${badgeClass(e)}">${e.dayLabel||'Entry'}</span>
+              <span class="entry-date">${fmtShort(e.date)}</span>
+              ${!open?`<span class="entry-preview">${e.notes}</span>`:''}
+              <div class="pain-bar">${painBar(e.pain)}</div>
+            </div>
+            ${open?`
+            <div class="entry-body">
+              <p class="entry-notes">${e.notes}</p>
+              ${tagsHtml?`<div class="tags">${tagsHtml}</div>`:''}
+              <div class="entry-actions">
+                <button class="btn-edit" onclick="editEntry(event,${e.id})">Edit entry</button>
+                <button class="btn-delete" onclick="deleteEntry(event,${e.id})">Remove</button>
+              </div>
+            </div>`:''}
+          </div>
+        </div>`;
+    });
+    html += '</div>';
+  }
+
+  if (showForm) {
+    const isEdit  = editingId!==null;
+    const editing = isEdit?entries.find(e=>e.id===editingId):null;
+    const tday    = todayStr();
+    const tagBtns = TAGS.map(t=>{
+      const on=(formData.tags||[]).includes(t.key);
+      return `<button class="tag-btn${on?' on-'+t.key:''}" onclick="toggleTag('${t.key}')">${t.label}</button>`;
+    }).join('');
+    html += `
+      <div class="form-wrap" id="entry-form">
+        <div class="form-title">${isEdit?'Edit entry':'New entry'}</div>
+        ${isEdit?`<div class="form-subtitle">Editing: ${editing?.dayLabel||'entry'} &mdash; ${fmtShort(editing?.date||tday)}</div>`:'<div class="form-spacer"></div>'}
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="f-date" value="${formData.date||tday}" max="${tday}" onchange="fd('date',this.value)">
+          </div>
+          <div class="form-group">
+            <label>Day label</label>
+            <input type="text" id="f-day" placeholder="e.g. Day 5" value="${formData.dayLabel||''}" oninput="fd('dayLabel',this.value)">
+          </div>
+          <div class="form-group full">
+            <label>Pain level &mdash; <span id="pain-label" style="color:${painColor(formData.pain||0)};font-weight:bold">${formData.pain||0}/10</span></label>
+            <div class="pain-row">
+              <input type="range" min="0" max="10" step="1" value="${formData.pain||0}" oninput="fd('pain',+this.value)">
+            </div>
+          </div>
+          <div class="form-group full">
+            <label>Tags</label>
+            <div class="tag-toggles">${tagBtns}</div>
+          </div>
+          <div class="form-group full">
+            <label>Notes</label>
+            <textarea id="f-notes" placeholder="How are you feeling today?">${formData.notes||''}</textarea>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-cancel" onclick="cancelForm()">Cancel</button>
+          <button class="btn-save" onclick="saveEntry()">${isEdit?'Update entry':'Save entry'}</button>
+        </div>
+      </div>`;
+  } else {
+    html += `<button class="add-btn" onclick="openForm()"><span class="add-icon">+</span>Add today's entry</button>`;
+  }
+
+  document.getElementById('main-content').innerHTML = html;
+  if (showForm) document.getElementById('entry-form')?.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function renderMeds() {
+  const today    = todayStr();
+  const todayFmt = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+  let html = `<div class="meds-header"><span class="section-label">Today's medications</span><span class="today-date-label">${todayFmt}</span></div>`;
+
+  MEDS.forEach(med => {
+    const count     = todayMedCount(med.id);
+    const isLogging = activeLogMed===med.id;
+    let statusHtml;
+    if (med.maxPerDay===null) {
+      statusHtml = `<span class="med-count-free">${count} taken</span>`;
+    } else {
+      statusHtml = `<div class="med-pips">${Array.from({length:med.maxPerDay},(_,i)=>`<div class="med-pip${i<count?' taken':''}"></div>`).join('')}</div>`;
+    }
+    html += `
+      <div class="med-item${isLogging?' logging':''}">
+        <div class="med-row">
+          <div class="med-info">
+            <span class="med-name">${med.name}${med.dose?` <span class="med-dim">${med.dose}</span>`:''}</span>
+            <span class="med-detail">${med.schedule}</span>
+          </div>
+          ${statusHtml}
+          <button class="btn-log${isLogging?' cancelling':''}" onclick="handleLogBtn('${med.id}')">${isLogging?'Cancel':'+ Log'}</button>
+        </div>
+        ${isLogging?`
+        <div class="log-inline">
+          <div class="log-group"><span class="log-label">Time</span><input type="time" id="log-time" value="${nowTime()}"></div>
+          <div class="log-group"><span class="log-label">Note (optional)</span><input type="text" id="log-note" class="log-note-in" placeholder="e.g. with food, before bed"></div>
+          <button class="btn-confirm" onclick="confirmLog()">Log dose</button>
+        </div>`:''}
+      </div>`;
+  });
+
+  const sortedLogs = [...medLogs].sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
+  const grouped = {};
+  sortedLogs.forEach(l=>{ (grouped[l.date]=grouped[l.date]||[]).push(l); });
+  const groups = Object.entries(grouped).sort(([a],[b])=>b.localeCompare(a));
+
+  html += `<div class="section-label" style="display:block;margin:1.75rem 0 0.75rem">Last dose taken</div>`;
+  html += `<div class="last-dose-grid">`;
+  MEDS.forEach(med => {
+    const last = lastDoseFor(med.id);
+    if (!last) {
+      html += `<div class="last-dose-card"><span class="last-dose-name">${med.name}</span><span class="last-dose-ago none">Not yet logged</span></div>`;
+    } else {
+      const ago = timeSince(last.date, last.time);
+      const totalMins = ago ? parseInt(ago) : 0;
+      const hrs = last.date === today
+        ? (() => { const [h,m]=last.time.split(':').map(Number); return h; })()
+        : -1;
+      // warn if over 4h for dihydrocodeine/paracetamol, 6h ibuprofen, 24h others
+      const warnThresholds = { dihydrocodeine:240, paracetamol:360, ibuprofen:480 };
+      const thresh = warnThresholds[med.id];
+      const diffMs = last ? Date.now() - new Date(last.date+'T'+last.time+':00').getTime() : 0;
+      const diffMins = Math.floor(diffMs/60000);
+      const isWarn = thresh && diffMins > thresh;
+      html += `<div class="last-dose-card">
+        <span class="last-dose-name">${med.name}</span>
+        <span class="last-dose-ago${isWarn?' warn':''}">${ago || '—'}</span>
+        <span class="last-dose-at">${last.date === today ? 'today at ' : fmtShort(last.date)+' at '}${last.time}</span>
+      </div>`;
+    }
+  });
+  html += `</div>`;
+
+  html += `<div class="history-title">Dose history</div>`;
+  if (!groups.length) {
+    html += `<div class="empty">No doses logged yet.<br>Use the + Log button above to get started.</div>`;
+  } else {
+    groups.forEach(([date,logs])=>{
+      const dateLabel = date===today?'Today':fmtDate(date);
+      html += `<div class="history-group"><div class="history-date">${dateLabel}</div>`;
+      logs.forEach(log=>{
+        const med     = MEDS.find(m=>m.id===log.medId);
+        const medName = med?med.name+(med.dose?' '+med.dose:''):log.medId;
+        html += `
+          <div class="history-row">
+            <span class="history-med">${medName}</span>
+            <span class="history-time">${log.time}</span>
+            ${log.notes?`<span class="history-note">${log.notes}</span>`:''}
+            <button class="btn-del-log" onclick="deleteLog(${log.id})">&times;</button>
+          </div>`;
+      });
+      html += `</div>`;
+    });
+  }
+
+  document.getElementById('main-content').innerHTML = html;
+}
+
+function setTab(tab) { activeTab=tab; expandedId=null; showForm=false; editingId=null; activeLogMed=null; render(); }
+function toggle(id) { expandedId=expandedId===id?null:id; renderJournal(); }
+
+function openForm() {
+  showForm=true; editingId=null; expandedId=null;
+  formData={date:todayStr(),notes:'',pain:4,tags:[],dayLabel:'Day '+nextDay()};
+  renderJournal();
+}
+function editEntry(evt,id) {
+  evt.stopPropagation();
+  const e=entries.find(x=>x.id===id); if(!e) return;
+  showForm=true; editingId=id; expandedId=null;
+  formData={...e,tags:[...(e.tags||[])]};
+  renderJournal();
+}
+function cancelForm() { showForm=false; editingId=null; renderJournal(); }
+
+function fd(k,v) {
+  formData[k]=v;
+  if (k==='pain') {
+    const lbl=document.getElementById('pain-label');
+    if (lbl) { lbl.textContent=v+'/10'; lbl.style.color=painColor(+v); }
+  }
+}
+function toggleTag(t) {
+  const tags=formData.tags||[];
+  formData.tags=tags.includes(t)?tags.filter(x=>x!==t):[...tags,t];
+  renderJournal();
+}
+function saveEntry() {
+  const notes    = document.getElementById('f-notes')?.value    || formData.notes    || '';
+  const dayLabel = document.getElementById('f-day')?.value      || formData.dayLabel || 'Entry';
+  const date     = document.getElementById('f-date')?.value     || formData.date;
+  if (editingId!==null) {
+    const idx=entries.findIndex(e=>e.id===editingId);
+    if (idx!==-1) entries[idx]={...entries[idx],date,dayLabel,notes,pain:formData.pain||0,tags:formData.tags||[]};
+    editingId=null;
+  } else {
+    entries.push({id:Date.now(),date,dayLabel,notes,pain:formData.pain||0,tags:formData.tags||[],type:'day'});
+  }
+  showForm=false; saveEntries(); aiResponse=null; render();
+}
+function deleteEntry(evt,id) {
+  evt.stopPropagation();
+  if (!confirm('Remove this entry?')) return;
+  entries=entries.filter(x=>x.id!==id); expandedId=null; saveEntries(); render();
+}
+
+function handleLogBtn(medId) { activeLogMed=activeLogMed===medId?null:medId; renderMeds(); }
+function confirmLog() {
+  const time  = document.getElementById('log-time')?.value||nowTime();
+  const notes = (document.getElementById('log-note')?.value||'').trim();
+  medLogs.push({id:Date.now(),medId:activeLogMed,date:todayStr(),time,notes});
+  activeLogMed=null; saveMedLogs(); renderMeds(); renderStats();
+}
+function deleteLog(id) {
+  if (!confirm('Remove this log entry?')) return;
+  medLogs=medLogs.filter(l=>l.id!==id); saveMedLogs(); renderMeds(); renderStats();
+}
+
+function exportCSV() {
+  const rows=[['Date','Day','Pain (0-10)','Tags','Notes']];
+  [...entries].sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>{
+    rows.push([e.date,e.dayLabel,e.pain,(e.tags||[]).join('; '),e.notes.replace(/"/g,'""')]);
+  });
+  rows.push([],['Medication Log'],['Date','Time','Medication','Dose','Notes']);
+  [...medLogs].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).forEach(l=>{
+    const med=MEDS.find(m=>m.id===l.medId);
+    rows.push([l.date,l.time,med?.name||l.medId,med?.dose||'',l.notes.replace(/"/g,'""')]);
+  });
+  const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='recovery-journey.csv'; a.click(); URL.revokeObjectURL(url);
+}
+
+/* ── Recovery Guide ── */
+let guideOpen         = false;
+let guideTimelineOpen = false;
+let aiResponse        = null;   // cached text
+let aiLoading         = false;
+let aiError           = false;
+
+function toggleGuide() {
+  guideOpen = !guideOpen;
+  guideTimelineOpen = false;
+  if (guideOpen && !aiResponse && !aiLoading) fetchAiReflection();
+  render();
+}
+
+function toggleGuideTimeline() {
+  guideTimelineOpen = !guideTimelineOpen;
+  renderGuide();
+}
+
+function refreshAiReflection() {
+  aiResponse = null;
+  aiError    = false;
+  fetchAiReflection();
+}
+
+async function fetchAiReflection() {
+  if (aiLoading) return;
+  aiLoading = true;
+  aiError   = false;
+  renderGuide();
+
+  const sx = entries.find(e => e.type === 'surgery');
+  const daysSince = sx ? Math.floor((Date.now() - new Date(sx.date+'T12:00:00')) / 86400000) : 0;
+  const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
+
+  const journalText = sorted.map(e =>
+    `${e.dayLabel} (${e.date}) — Pain ${e.pain}/10: ${e.notes}`
+  ).join('\n');
+
+  const prompt = `You are a warm, knowledgeable recovery companion for someone who has had a total right hip replacement (they are 39 years old, and previously had Perthes disease as a child, which made the surgery more complex). They are now ${daysSince} days post-surgery.
+
+Here are all their journal entries so far:
+
+${journalText}
+
+Based on these personal notes, write a short, warm, personalised response (3–5 sentences) that:
+- Directly acknowledges specific things they have mentioned (pain levels, milestones, medication changes, things they noticed)
+- Reflects their progress back to them in an encouraging but honest way
+- Gives 1–2 pieces of practical reassurance or context grounded in what they've written
+- Feels personal and human, not generic — reference their actual words and experiences
+- Does NOT give medical advice or instructions, just supportive context
+
+Keep it conversational and warm. Do not use bullet points or headers. Write as flowing prose.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    const text = data?.content?.find(b => b.type === 'text')?.text || '';
+    aiResponse = text.trim();
+    aiError    = !aiResponse;
+  } catch (e) {
+    aiError = true;
+  }
+
+  aiLoading = false;
+  renderGuide();
+}
+
+function renderGuide() {
+  const panel = document.getElementById('guide-panel');
+  const btn   = document.getElementById('guide-toggle-btn');
+  if (!panel) return;
+  if (!guideOpen) { panel.style.display = 'none'; btn.classList.remove('open'); return; }
+  btn.classList.add('open');
+  panel.style.display = 'block';
+
+  const sx = entries.find(e => e.type === 'surgery');
+  let todayNote = null;
+  if (sx) {
+    const diff = Math.floor((Date.now() - new Date(sx.date+'T12:00:00')) / 86400000);
+    todayNote = getDayNote(diff);
+  }
+
+  let html = '';
+
+  // AI personalised reflection
+  html += `<div class="guide-ai">
+    <div class="guide-ai-label"><span>✦ Personalised reflection</span></div>`;
+  if (aiLoading) {
+    html += `<div class="guide-ai-loading">Reading your journal entries…</div>`;
+  } else if (aiError) {
+    html += `<div class="guide-ai-error">Couldn't load a personalised response right now.</div>
+      <button class="guide-refresh" onclick="refreshAiReflection()">Try again</button>`;
+  } else if (aiResponse) {
+    const paras = aiResponse.split('\n').filter(p => p.trim());
+    html += `<div class="guide-ai-text">${paras.map(p=>`<p>${p}</p>`).join('')}</div>
+      <button class="guide-refresh" onclick="refreshAiReflection()">Refresh reflection</button>`;
+  }
+  html += `</div>`;
+
+  // Static today's focus
+  if (todayNote) {
+    html += `
+      <div class="guide-today">
+        <div class="guide-today-label">Today's focus</div>
+        <div class="guide-today-title">${todayNote.title}</div>
+        <div class="guide-today-note">${todayNote.note}</div>
+      </div>`;
+  }
+
+  html += `<button class="guide-timeline-toggle" onclick="toggleGuideTimeline()">${guideTimelineOpen ? '▲ Hide full timeline' : '▼ Show full recovery timeline'}</button>`;
+
+  if (guideTimelineOpen) {
+    html += '<div class="guide-timeline">';
+    RECOVERY_PHASES.forEach(p => {
+      html += `<div class="guide-phase"><div class="guide-phase-title">${p.title}</div><div class="guide-phase-note">${p.note}</div></div>`;
+    });
+    html += `<div class="guide-disclaimer">Based on published hip replacement recovery research. Younger patients (under 50) typically recover faster. Your history of Perthes disease means the surgery was more complex, but outcomes research shows excellent long-term pain relief and function. Always follow your surgeon's and physio's specific guidance over general timelines.</div>`;
+    html += '</div>';
+  }
+
+  panel.innerHTML = html;
+}
+
+
+const RECOVERY_PHASES = [
+  {
+    title: 'Days 1–3 · Hospital (acute phase)',
+    note: 'Pain peaks around day 2–3 — this is normal and expected. Physio starts immediately: sitting up, short walks with a frame, stair practice before discharge. Ice 20 mins on/off helps significantly. Bowel medications (Sennosides, Lactulose) are important as opioids cause constipation.'
+  },
+  {
+    title: 'Days 4–7 · First week home',
+    note: 'Pain begins to ease but fatigue is high — your body is healing hard. Short walks every 1–2 hours are more beneficial than one long walk. Sleep disruption is common. Aim to reduce opioid reliance gradually. Ice and elevation remain key for swelling.'
+  },
+  {
+    title: 'Week 2 · Days 8–14',
+    note: 'Noticeable improvement in mobility. Transition from frame toward a crutch or stick. Wound check around day 10–14. Swelling may worsen mid-week before improving. Daily PT exercises (ankle pumps, glute squeezes, leg slides) are now crucial.'
+  },
+  {
+    title: 'Weeks 3–6',
+    note: 'Most people stop needing regular opioids by week 3–4. Walking distances increase significantly. Hip precautions (no crossing legs, no bending past 90°) remain in force for 6–12 weeks. Light stationary cycling and resistance band work may begin with physio guidance. Office-type work can resume around week 5–6.'
+  },
+  {
+    title: 'Weeks 6–8 · Implant integration',
+    note: 'The titanium implant bonds to bone over 6–8 weeks. Driving typically resumes around week 6 (right hip — check with your surgeon). Hip strength improves noticeably. The hip may still feel "different" as your brain recalibrates movement patterns.'
+  },
+  {
+    title: 'Months 3–6 · Full recovery',
+    note: 'Most patients feel close to normal by 3 months. For younger patients (like you at 39) recovery tends to be faster and more complete. Swimming from ~8 weeks, cycling and hiking from ~3 months. Full bone integration and soft-tissue healing completes around 6 months. Research on Perthes-related THA shows excellent long-term pain relief outcomes, often transformative compared to pre-surgery function.'
+  }
+];
+
+const DAILY_NOTES = [
+  { day: 0,  title: 'Surgery day',    note: 'First steps happen today with physio support. Pain is managed by your team. Rest and let the anaesthetic clear. Ankle pumps in bed help circulation.' },
+  { day: 1,  title: 'Day 1',          note: 'Mobilise as much as your team encourages — even short walks matter hugely. Sitting in a chair is better than lying in bed. Pain will be significant but should be covered by medication.' },
+  { day: 2,  title: 'Day 2',          note: 'This is typically the peak pain day — completely normal. Ice helps a lot. Don\'t push too hard if pain is high. Bowel function may be sluggish due to opioids; keep taking Lactulose and Sennosides.' },
+  { day: 3,  title: 'Day 3',          note: 'Many patients begin feeling better today. Stair assessment is a common discharge milestone. Being home often feels better mentally — familiar environment aids recovery.' },
+  { day: 4,  title: 'Day 4',          note: 'First night home done. Begin reducing opioids if pain allows — this is a great sign. Short walks every hour or two are better than one long one. Swelling may be noticeable today.' },
+  { day: 5,  title: 'Day 5',          note: 'Fatigue can hit harder than expected this week — your body is using enormous energy to heal. Sleep as much as you need. Keep up the physio exercises: leg slides, glute squeezes, ankle pumps.' },
+  { day: 6,  title: 'Day 6',          note: 'Continue gentle walking and PT exercises. Keep ice on the hip for swelling — 20 mins on, 20 off. Elevation when sitting helps reduce fluid buildup.' },
+  { day: 7,  title: 'Day 7',          note: 'One week in — well done. You should notice more ease with getting in and out of chairs. Pain should be trending downward. Continue all exercises and short walks.' },
+  { day: 8,  title: 'Day 8',          note: 'Week 2 begins. Many people notice a clearer improvement in mobility this week. Keep up the walking rhythm. Wound may itch as it heals — avoid touching or scratching.' },
+  { day: 9,  title: 'Day 9',          note: 'Aim to walk a little further each day. If using a frame, try to feel how much weight you\'re confidently putting through the hip — it should be increasing.' },
+  { day: 10, title: 'Day 10',         note: 'Wound check typically around now. Swelling often peaks again mid-week 2 before dropping. This is normal fluid redistribution, not a sign of problems.' },
+  { day: 11, title: 'Day 11',         note: 'Hip precautions remain important — no crossing legs, no bending past 90° at the hip, no low seats. Stick with these until your surgeon clears you (usually 6–12 weeks).' },
+  { day: 12, title: 'Day 12',         note: 'You may begin transitioning from a frame to a single crutch if physio agrees. Stairs should feel more manageable. Sleep position: back or on unoperated side with pillow between knees.' },
+  { day: 13, title: 'Day 13',         note: 'Pain at rest should be noticeably lower now. Movement pain is normal and will keep reducing. Keep up the prescribed exercises — consistency here pays off significantly in months 2–3.' },
+  { day: 14, title: 'Day 14',         note: 'Two weeks post-surgery — a significant milestone. Most patients report meaningful improvement by now. Wound should be healing well. Continue physio and build walking distance gradually.' },
+];
+
+function getDayNote(daysSinceSurgery) {
+  if (daysSinceSurgery < 0) return null;
+  const exact = DAILY_NOTES.find(n => n.day === daysSinceSurgery);
+  if (exact) return exact;
+  if (daysSinceSurgery < 21) return { title: `Day ${daysSinceSurgery}`, note: 'Continue your PT exercises daily: leg slides, glute squeezes, ankle pumps. Walk short distances regularly throughout the day rather than one long walk. Pain should be gradually reducing. Swelling is normal — ice and elevation help.' };
+  if (daysSinceSurgery < 42) return { title: `Day ${daysSinceSurgery} · Weeks 3–6`, note: 'Mobility improving steadily. Aim to reduce walking aid dependency with physio guidance. Hip precautions still apply. You may start feeling close to normal for short periods — this is good but keep respecting the healing process.' };
+  if (daysSinceSurgery < 56) return { title: `Day ${daysSinceSurgery} · Weeks 6–8`, note: 'Implant is bonding to bone during this phase. Driving may now be possible (right hip — confirm with your surgeon). Strength building is the focus. Many patients feel a step-change in confidence around now.' };
+  if (daysSinceSurgery < 90) return { title: `Day ${daysSinceSurgery} · Months 2–3`, note: 'Major recovery phase nearing completion. Swimming is typically permitted from around week 8. Hip should feel increasingly natural. Keep up strength work — the muscles around the joint need time to rebuild fully.' };
+  return { title: `Day ${daysSinceSurgery} · Long-term recovery`, note: 'Most patients feel close to normal by 3–4 months. Research on Perthes-related hip replacements shows excellent long-term outcomes — the new joint should give you function you may not have had in years. Continue any physio exercises and stay active.' };
+}
+
+function toggleGuide() {
+  guideOpen = !guideOpen;
+  guideTimelineOpen = false;
+  render();
+}
+
+function toggleGuideTimeline() {
+  guideTimelineOpen = !guideTimelineOpen;
+  renderGuide();
+}
+
+function renderGuide() {
+  const panel = document.getElementById('guide-panel');
+  const btn   = document.getElementById('guide-toggle-btn');
+  if (!panel) return;
+  if (!guideOpen) { panel.style.display = 'none'; btn.classList.remove('open'); return; }
+  btn.classList.add('open');
+  panel.style.display = 'block';
+
+  const sx = entries.find(e => e.type === 'surgery');
+  let todayNote = null;
+  if (sx) {
+    const diff = Math.floor((Date.now() - new Date(sx.date+'T12:00:00')) / 86400000);
+    todayNote = getDayNote(diff);
+  }
+
+  let html = '';
+  if (todayNote) {
+    html += `
+      <div class="guide-today">
+        <div class="guide-today-label">Today's focus</div>
+        <div class="guide-today-title">${todayNote.title}</div>
+        <div class="guide-today-note">${todayNote.note}</div>
+      </div>`;
+  }
+
+  html += `<button class="guide-timeline-toggle" onclick="toggleGuideTimeline()">${guideTimelineOpen ? '▲ Hide full timeline' : '▼ Show full recovery timeline'}</button>`;
+
+  if (guideTimelineOpen) {
+    html += '<div class="guide-timeline">';
+    RECOVERY_PHASES.forEach(p => {
+      html += `<div class="guide-phase"><div class="guide-phase-title">${p.title}</div><div class="guide-phase-note">${p.note}</div></div>`;
+    });
+    html += `<div class="guide-disclaimer">Based on published hip replacement recovery research. Younger patients (under 50) typically recover faster. Your history of Perthes disease means the surgery was more complex, but outcomes research shows excellent long-term pain relief and function. Always follow your surgeon's and physio's specific guidance over general timelines.</div>`;
+    html += '</div>';
+  }
+
+  panel.innerHTML = html;
+}
+
+load();
+</script>
+</body>
+</html>
